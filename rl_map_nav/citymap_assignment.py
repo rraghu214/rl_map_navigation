@@ -122,6 +122,8 @@ class DrivingDQN(nn.Module):
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
+            nn.Linear(256, 256), # Added Layer
+            nn.ReLU(),           # Activation for added layer
             nn.Linear(256, 128),
             nn.ReLU(),
             nn.Linear(128, output_dim)
