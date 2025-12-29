@@ -12,8 +12,8 @@ I went through the `citymap_assignment.py` file and fine-tuned the critical para
 ## Observations & Results
 After applying the fixes, I ran the simulation to observe the agent's learning progress:
 
-*   **At 5,000 Episodes**: The car started showing significant improvement. It had learned the basics of avoiding immediate obstacles and was able to successfully **cross the first checkpoint**.
-*   **At 20,000 Episodes**: The policy had matured significantly. The car could navigate more complex segments of the map, successfully **crossing the 3rd checkpoint** and ultimately reaching the goal: the **Eiffel Tower**.
+*   **At 2,500 Episodes**: The car started showing significant improvement. It had learned the basics of avoiding immediate obstacles and was able to successfully **cross the first & second checkpoint**.
+*   **At 4,000 Episodes**: The policy had matured significantly. The car could navigate more complex segments of the map, successfully **crossing the 3rd checkpoint** and ultimately reaching the goal: the **Eiffel Tower**.
 
 ## Conclusion
 The experiments confirm that with the corrected physics and hyperparameter settings, the DQN agent is capable of learning a robust navigation policy for the given city map.
