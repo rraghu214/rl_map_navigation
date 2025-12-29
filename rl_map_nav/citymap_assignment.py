@@ -69,7 +69,7 @@ C_SENSOR_OFF= QColor("#BF616A") # Red
 # ==========================================
 CAR_WIDTH = 14     
 CAR_HEIGHT = 8   
-SENSOR_DIST = 120  # FIX ME! Distance sensors look ahead (pixels) - Currently unrealistic!
+SENSOR_DIST = 160  # FIX ME! Distance sensors look ahead (pixels) - Currently unrealistic! # Changing for Blr map. from 120 to 160
 SENSOR_ANGLE = 45    # FIX ME! Angle spread of sensors (degrees) - Too narrow!
 SPEED = 4          # FIX ME! Forward speed (pixels/step) - Way too fast!
 TURN_SPEED = 3    # FIX ME! Regular turn angle (degrees/step) - Too slow!
@@ -135,6 +135,7 @@ class CarBrain:
     def __init__(self, map_image: QImage):
         self.map = map_image
         self.w, self.h = map_image.width(), map_image.height()
+        self.episode = 0
         
         # RL Init
         self.input_dim = 9  # 7 sensors + angle_to_target + distance_to_target
@@ -174,6 +175,24 @@ class CarBrain:
     def set_start_pos(self, point):
         self.start_pos = point
         self.car_pos = point
+
+    def save_model(self, path="rl_map_nav/dqn_car.pth"):
+        torch.save({
+            "policy_state": self.policy_net.state_dict(),
+            "target_state": self.target_net.state_dict(),
+            "optimizer_state": self.optimizer.state_dict(),
+            "epsilon": self.epsilon,
+            "episode": self.episode
+        }, path)
+
+    def load_model(self, path="dqn_car.pth"):
+        checkpoint = torch.load(path)
+        self.policy_net.load_state_dict(checkpoint["policy_state"])
+        self.target_net.load_state_dict(checkpoint["target_state"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state"])
+        self.epsilon = checkpoint["epsilon"]
+        self.episode = checkpoint["episode"]
+    
 
     def reset(self):
         self.alive = True
@@ -265,7 +284,7 @@ class CarBrain:
         
         car_center_val = self.check_pixel(self.car_pos.x(), self.car_pos.y())
         
-        if car_center_val < 0.4:
+        if car_center_val < 0.85: # Changing for Blr map.
             reward = -100
             done = True
             self.alive = False
@@ -631,6 +650,12 @@ class NeuralNavApp(QMainWindow):
         self.val_rew.setStyleSheet(f"color: {C_ACCENT.name()}; font-weight: bold;")
         sf_layout.addWidget(QLabel("Last Reward:"), 1,0)
         sf_layout.addWidget(self.val_rew, 1,1)
+
+        self.val_ep = QLabel("0")
+        self.val_ep.setStyleSheet(f"color: {C_ACCENT.name()}; font-weight: bold;")
+        sf_layout.addWidget(QLabel("Episode:"), 2, 0)
+        sf_layout.addWidget(self.val_ep, 2, 1)
+
         
         vbox.addWidget(stats_frame)
 
@@ -650,7 +675,7 @@ class NeuralNavApp(QMainWindow):
         main_layout.addWidget(self.view)
 
         # Logic
-        self.setup_map("city_map.png") 
+        self.setup_map("rl_map_nav/city_map_paris.png") 
         self.setup_state = 0 
         self.sim_timer = QTimer()
         self.sim_timer.timeout.connect(self.game_loop)
@@ -792,9 +817,14 @@ class NeuralNavApp(QMainWindow):
         self.brain.steps += 1
         
         if done:
+            self.brain.episode += 1
             self.brain.finalize_episode(self.brain.score)
             
             should_reset_position = False
+
+            if self.brain.episode % 50 == 0:
+                self.brain.save_model()
+
             
             if self.brain.consecutive_crashes >= MAX_CONSECUTIVE_CRASHES:
                 self.log(f"<font color='#BF616A'><b>⚠️ {MAX_CONSECUTIVE_CRASHES} consecutive crashes! Resetting to origin...</b></font>")
@@ -843,6 +873,7 @@ class NeuralNavApp(QMainWindow):
         self.update_visuals()
         self.val_eps.setText(f"{self.brain.epsilon:.3f}")
         self.val_rew.setText(f"{self.brain.score:.0f}")
+        self.val_ep.setText(str(self.brain.episode))
 
     def update_visuals(self):
         self.car_item.setPos(self.brain.car_pos)
